@@ -1,17 +1,20 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import dynamic from 'next/dynamic';
 // Grab these from your Supabase Dashboard -> Project Settings -> API
 // Note: In Next.js, these should ideally live in a .env.local file
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-
 const CATEGORIES = ["Flood", "Earthquake", "Wildfire", "Hurricane / Cyclone", "Landslide", "Medical Emergency", "Infrastructure Collapse", "Other"];
 const STATUSES = ["All", "SOS Sent", "Assessing", "Relief Dispatched", "Resolved"];
 const NEEDS_OPTIONS = ["Search & Rescue", "Food & Water", "Medical Supplies", "Evacuation Transport", "Shelter", "Volunteers"];
-
+const LiveMap = dynamic(() => import('./LiveMap'), { 
+  ssr: false, 
+  loading: () => <div style={{ height: "450px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "16px" }}>Initializing Satellites...</div> 
+});
 const SAMPLE_REPORTS = [
   { id: "SOS-001", title: "Flash flood trapping 20 people", category: "Flood", status: "Relief Dispatched", date: "2024-03-10", location: "River Bank, Block 4", priority: "Critical", description: "Water levels rose suddenly. People trapped on the second floor of the community hall.", needs: ["Search & Rescue", "Evacuation Transport"], upvotes: 24, lat: 28.6, lng: 77.2 },
   { id: "SOS-002", title: "Building partial collapse after tremor", category: "Earthquake", status: "Assessing", date: "2024-03-12", location: "Industrial Area, Sector 7", priority: "Critical", description: "Old textile factory roof collapsed. Suspected 5 people inside.", needs: ["Search & Rescue", "Medical Supplies"], upvotes: 47, lat: 28.62, lng: 77.22 },
@@ -86,13 +89,13 @@ const styles = `
   .shutter-item { background: none; border: none; color: var(--muted); font-family: var(--font-display); font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
   .shutter-item:hover { background: var(--bg3); color: var(--primary); }
   
-  /* AUTH PAGES (New Full Page Styles) */
+  /* AUTH PAGES */
   .auth-page { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; background-image: radial-gradient(ellipse at top, rgba(255,106,0,0.05) 0%, transparent 50%); }
   .auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); animation: fadeIn 0.3s ease-out; }
 
   /* SETTINGS MODAL STYLES */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(10, 8, 7, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; animation: fadeIn 0.2s ease-out; }
-  .modal-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.8); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .modal-card { background: var(--bg2); padding: 40px; border-radius: 20px; border: 1px solid var(--border); width: 90%; max-width: 600px; position: relative; }
   .modal-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: var(--muted); font-size: 28px; cursor: pointer; transition: color 0.2s; line-height: 1; padding: 0; }
   .modal-close:hover { color: var(--primary); }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -121,7 +124,7 @@ const styles = `
   .stat-num { font-size: 36px; font-weight: 800; color: var(--primary); font-family: var(--font-mono); letter-spacing: -1px; }
   .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
 
-  /* PREDICTION DASHBOARD ADDITIONS */
+  /* PREDICTION DASHBOARD */
   .prediction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
   .predict-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; }
   .predict-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--red); }
@@ -134,7 +137,30 @@ const styles = `
   .prob-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
   .prob-label { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
   .predict-action { margin-top: 20px; padding: 12px 16px; background: rgba(255,106,0,0.08); border: 1px dashed rgba(255,106,0,0.3); border-radius: 8px; font-size: 13px; color: var(--primary); font-weight: 600; display: flex; gap: 10px; align-items: center; }
-
+  
+  /* PRO SETTINGS MODAL */
+  .settings-layout { display: flex; min-height: 400px; }
+  .settings-sidebar { width: 180px; border-right: 1px solid var(--border); padding-right: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .settings-tab { background: none; border: none; color: var(--muted); padding: 10px 14px; text-align: left; font-family: var(--font-display); font-weight: 600; font-size: 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .settings-tab:hover { color: var(--text); background: var(--bg3); }
+  .settings-tab.active { background: var(--primary-dim); color: var(--primary); }
+  .settings-content { flex: 1; padding-left: 30px; }
+  
+  /* AVATAR */
+  .avatar-section { display: flex; align-items: center; gap: 24px; margin-bottom: 32px; }
+  .avatar-wrapper { position: relative; width: 80px; height: 80px; border-radius: 50%; background: var(--bg3); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-upload-btn { position: absolute; inset: 0; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; transition: opacity 0.2s; font-size: 12px; font-weight: 700; text-align: center; }
+  .avatar-wrapper:hover .avatar-upload-btn { opacity: 1; }
+  .avatar-upload-btn input { display: none; }
+  
+  /* TOGGLES */
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg3); border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.02); }
+  .toggle-switch { position: relative; width: 44px; height: 24px; background: var(--bg); border-radius: 12px; border: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+  .toggle-switch.on { background: var(--primary); border-color: var(--primary); }
+  .toggle-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
+  .toggle-switch.on .toggle-knob { transform: translateX(20px); }
+  
   /* SECTION & FORMS */
   .section { padding: 80px 2rem; max-width: 1200px; margin: 0 auto; }
   .section-label { font-family: var(--font-mono); font-size: 12px; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
@@ -291,6 +317,33 @@ const styles = `
   .req-btn.Donate:hover { background: #00ff83; box-shadow: 0 4px 15px rgba(0,230,118,0.3); transform: translateY(-1px); }
   .req-btn.Volunteer { background: var(--amber); color: #000; }
   .req-btn.Volunteer:hover { background: #ffcf33; box-shadow: 0 4px 15px rgba(245,197,24,0.3); transform: translateY(-1px); }
+  /* IMAGE UPLOAD & CARD IMAGES */
+  .image-upload-area { border: 2px dashed var(--border); border-radius: 12px; padding: 32px 20px; text-align: center; background: var(--bg3); transition: all 0.2s; position: relative; overflow: hidden; margin-top: 8px; }
+  .image-upload-area:hover { border-color: var(--primary); }
+  .image-upload-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }
+  .image-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-top: 16px; border: 1px solid var(--border); position: relative; z-index: 5; }
+  
+  .report-card { padding: 0; } /* Removing original padding so image can stretch */
+  .report-card-image { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); background: var(--bg3); display: block; }
+  .report-card-body { padding: 22px; display: flex; flex-direction: column; flex: 1; }
+
+  /* PRO DASHBOARD LAYOUT */
+  .dashboard-layout { display: flex; gap: 32px; max-width: 1200px; margin: 0 auto; padding: 40px 2rem; min-height: 75vh; align-items: flex-start; }
+  .dash-sidebar { width: 260px; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 100px; flex-shrink: 0; }
+  .dash-tab { background: none; border: none; color: var(--muted); font-family: var(--font-display); font-size: 14px; font-weight: 600; padding: 12px 16px; border-radius: 10px; cursor: pointer; text-align: left; transition: all 0.2s; display: flex; align-items: center; gap: 12px; }
+  .dash-tab:hover { background: var(--bg3); color: var(--text); }
+  .dash-tab.active { background: var(--primary-dim); color: var(--primary); }
+  .dash-section-title { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin: 16px 0 8px 12px; }
+  .dash-content { flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 40px; min-height: 500px; animation: fadeIn 0.3s ease-out; }
+  
+  .dev-placeholder { text-align: center; padding: 80px 20px; border: 1px dashed var(--border); border-radius: 12px; background: var(--bg3); }
+  .dev-placeholder h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .dev-placeholder p { color: var(--muted); font-size: 14px; }
+  
+  @media (max-width: 800px) {
+    .dashboard-layout { flex-direction: column; }
+    .dash-sidebar { width: 100%; position: static; }
+  }
 
   @media (max-width: 768px) {
     .stats-bar { grid-template-columns: repeat(2,1fr); }
@@ -311,94 +364,211 @@ function StatusBadge({ status }) {
   );
 }
 
-function SettingsModal({ isOpen, onClose, userEmail }) {
+function SettingsModal({ isOpen, onClose, session }) {
+  const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  
   const [newPassword, setNewPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [smsAlerts, setSmsAlerts] = useState(false);
 
-  // Feature 1: Change Password
-  const handleUpdatePassword = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  useEffect(() => {
+    if (isOpen && session?.user) {
+      const meta = session.user.user_metadata;
+      setFullName(meta.full_name || "");
+      setPhone(meta.phone || "");
+      setAvatarUrl(meta.avatar_url || null);
+    }
+  }, [isOpen, session]);
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    
-    setLoading(false);
-    if (error) alert("Error updating password: " + error.message);
-    else {
-      alert("Password updated successfully!");
-      setNewPassword("");
+  if (!isOpen || !session) return null;
+
+  const handleAvatarUpload = async (event) => {
+    try {
+      setUploading(true);
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${session.user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (updateError) throw updateError;
+      
+      setAvatarUrl(publicUrl);
+      alert("Avatar updated successfully!");
+    } catch (error) {
+      alert("Error uploading image: " + error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
-  // Feature 2: Delete Account (With Password Verification)
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: fullName, phone: phone }
+    });
+    setLoading(false);
+    
+    if (error) alert("Error updating profile: " + error.message);
+    else alert("Profile saved!");
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (error) alert("Error updating password: " + error.message);
+    else { alert("Password updated successfully!"); setNewPassword(""); }
+  };
+
   const handleDeleteAccount = async (e) => {
     e.preventDefault();
-    if (!confirm("Are you absolutely sure you want to delete your account? This cannot be undone.")) return;
-    
+    if (!confirm("Are you absolutely sure you want to delete your account?")) return;
     setLoading(true);
-
-    // Step A: Verify the password by trying to log in again
-    const { error: verifyError } = await supabase.auth.signInWithPassword({ 
-      email: userEmail, 
-      password: deletePassword 
-    });
-
-    if (verifyError) {
-      setLoading(false);
-      return alert("Incorrect password. We cannot delete your account.");
-    }
-
-    // Step B: Call your custom Supabase RPC function to delete the user
-    // Note: You must create a Postgres function called 'delete_user' in Supabase SQL Editor for this to work.
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email: session.user.email, password: deletePassword });
+    if (verifyError) { setLoading(false); return alert("Incorrect password."); }
     const { error: deleteError } = await supabase.rpc('delete_user');
-
-    if (deleteError) {
-      setLoading(false);
-      return alert("Failed to delete account: " + deleteError.message);
-    }
-
-    // Step C: Log them out locally
+    if (deleteError) { setLoading(false); return alert("Failed to delete: " + deleteError.message); }
     await supabase.auth.signOut();
     setLoading(false);
-    alert("Your account has been permanently deleted.");
-    window.location.reload(); // Refresh app state
+    window.location.reload(); 
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
+      <div className="modal-card" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>&times;</button>
-        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 16 }}>Account Settings</h2>
+        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 32 }}>Account Control</h2>
         
-        {/* Change Password Form */}
-        <div style={{ background: "var(--bg3)", padding: 20, borderRadius: 12, marginBottom: 24 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Change Password</h3>
-          <form onSubmit={handleUpdatePassword}>
-            <input type="password" placeholder="New Password (min 6 chars)" className="form-input mb-4" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
-            <button type="submit" className="submit-btn" disabled={loading} style={{ padding: "10px", fontSize: 13 }}>Update Password</button>
-          </form>
-        </div>
+        <div className="settings-layout">
+          <div className="settings-sidebar">
+            <button className={`settings-tab ${activeTab === "profile" ? "active" : ""}`} onClick={() => setActiveTab("profile")}>👤 Profile details</button>
+            <button className={`settings-tab ${activeTab === "security" ? "active" : ""}`} onClick={() => setActiveTab("security")}>🔐 Security</button>
+            <button className={`settings-tab ${activeTab === "notifications" ? "active" : ""}`} onClick={() => setActiveTab("notifications")}>🔔 Notifications</button>
+            <div style={{ flex: 1 }} />
+            <button className={`settings-tab`} style={{ color: "var(--red)" }} onClick={() => setActiveTab("danger")}>⚠️ Danger Zone</button>
+          </div>
 
-        {/* Delete Account Form */}
-        <div style={{ border: "1px dashed var(--red)", padding: 20, borderRadius: 12 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--red)", marginBottom: 8 }}>Danger Zone</h3>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>Permanently delete your account. Enter password to confirm.</p>
-          <form onSubmit={handleDeleteAccount}>
-            <input type="password" placeholder="Current Password" className="form-input mb-4" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} required />
-            <button type="submit" className="submit-btn btn-danger" disabled={loading} style={{ padding: "10px", fontSize: 13, background: "transparent", color: "var(--red)", border: "1px solid var(--red)" }}>
-              Permanently Delete Account
-            </button>
-          </form>
+          <div className="settings-content">
+            {activeTab === "profile" && (
+              <div style={{ animation: "fadeIn 0.2s" }}>
+                <h3 style={{ fontSize: 20, marginBottom: 24 }}>Personal Information</h3>
+                
+                <div className="avatar-section">
+                  <div className="avatar-wrapper">
+                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="avatar-img" /> : <div style={{ fontSize: 24, color: "var(--muted)" }}>👤</div>}
+                    <label className="avatar-upload-btn">
+                      {uploading ? "..." : "Upload"}
+                      <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
+                    </label>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{fullName || "User Account"}</div>
+                    <div style={{ color: "var(--muted)", fontSize: 13 }}>{session.user.email}</div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateProfile}>
+                  <div className="form-group">
+                    <label className="form-label">Full Name</label>
+                    <input type="text" className="form-input" value={fullName} onChange={e => setFullName(e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 24 }}>
+                    <label className="form-label">Phone Number (For SMS Alerts)</label>
+                    <input type="tel" className="form-input" value={phone} onChange={e => setPhone(e.target.value)} />
+                  </div>
+                  <button type="submit" className="submit-btn" disabled={loading} style={{ padding: "12px", fontSize: 14, width: "auto", paddingLeft: 30, paddingRight: 30 }}>
+                    {loading ? "Saving..." : "Save Changes"}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {activeTab === "security" && (
+              <div style={{ animation: "fadeIn 0.2s" }}>
+                <h3 style={{ fontSize: 20, marginBottom: 24 }}>Password Management</h3>
+                <div style={{ background: "var(--bg3)", padding: 24, borderRadius: 12 }}>
+                  <form onSubmit={handleUpdatePassword}>
+                    <label className="form-label">New Password</label>
+                    <input type="password" placeholder="Min 6 characters" className="form-input mb-4" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
+                    <button type="submit" className="submit-btn" disabled={loading} style={{ padding: "12px", fontSize: 14, marginTop: 16 }}>Update Password</button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "notifications" && (
+              <div style={{ animation: "fadeIn 0.2s" }}>
+                <h3 style={{ fontSize: 20, marginBottom: 24 }}>Alert Preferences</h3>
+                
+                <div className="toggle-row">
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Email Alerts</div>
+                    <div style={{ fontSize: 13, color: "var(--muted)" }}>Receive daily digests and major system updates.</div>
+                  </div>
+                  <div className={`toggle-switch ${emailAlerts ? "on" : ""}`} onClick={() => setEmailAlerts(!emailAlerts)}>
+                    <div className="toggle-knob" />
+                  </div>
+                </div>
+
+                <div className="toggle-row">
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Emergency SMS Broadcasts</div>
+                    <div style={{ fontSize: 13, color: "var(--muted)" }}>Immediate texts for high-priority SOS in your area.</div>
+                  </div>
+                  <div className={`toggle-switch ${smsAlerts ? "on" : ""}`} onClick={() => setSmsAlerts(!smsAlerts)}>
+                    <div className="toggle-knob" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "danger" && (
+              <div style={{ animation: "fadeIn 0.2s" }}>
+                <h3 style={{ fontSize: 20, color: "var(--red)", marginBottom: 24 }}>Delete Account</h3>
+                <div style={{ border: "1px dashed var(--red)", padding: 24, borderRadius: 12 }}>
+                  <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20 }}>This action is permanent and will remove all your SOS reports and data.</p>
+                  <form onSubmit={handleDeleteAccount}>
+                    <input type="password" placeholder="Confirm your password" className="form-input" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} required />
+                    <button type="submit" className="submit-btn" disabled={loading} style={{ padding: "12px", fontSize: 14, marginTop: 16, background: "transparent", color: "var(--red)", border: "1px solid var(--red)" }}>
+                      Permanently Delete Account
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// NEW FULL PAGE VIEWS FOR AUTH
 function LoginView({ onLoginSuccess, onSwitchToSignup }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -409,13 +579,7 @@ function LoginView({ onLoginSuccess, onSwitchToSignup }) {
     if (!email || !password) return;
     
     setLoading(true);
-    
-    // Supabase Auth: Sign In
-    const { error } = await supabase.auth.signInWithPassword({ 
-      email, 
-      password 
-    });
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     
     if (error) {
@@ -473,16 +637,13 @@ function SignupView({ onSignupSuccess, onSwitchToLogin }) {
     if (!email || !password || !name) return;
     
     setLoading(true);
-    
-    // Supabase Auth: Sign Up
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name, role: role } // Save extra details here
+        data: { full_name: name, role: role }
       }
     });
-    
     setLoading(false);
     
     if (error) {
@@ -543,58 +704,232 @@ function SignupView({ onSignupSuccess, onSwitchToLogin }) {
 }
 
 function ForecastView() {
+  const [predictions, setPredictions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [keralaMode, setKeralaMode] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState("All");
+  
+  // NEW: State to hold verification results for each alert
+  const [verifications, setVerifications] = useState({});
+
+  const COUNTRIES = ["All", "USA", "Canada", "Australia", "India", "Indonesia", "Japan", "Mexico", "Spain", "Brazil"];
+  const KERALA_DISTRICTS = ["All Kerala", "Alappuzha", "Ernakulam", "Idukki", "Kannur", "Kasaragod", "Kollam", "Kottayam", "Kozhikode", "Malappuram", "Palakkad", "Pathanamthitta", "Thiruvananthapuram", "Thrissur", "Wayanad"];
+
+  useEffect(() => {
+    const fetchNASAData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=100');
+        const data = await response.json();
+
+        let liveWarnings = data.events.map(event => {
+          const categoryId = event.categories[0]?.id || "unknown";
+          let typeLabel = "Alert"; let icon = "⚠️"; let severity = "High"; let queryTerm = "disaster";
+          
+          if (categoryId === "wildfires") { typeLabel = "Wildfire"; icon = "🔥"; severity = "Critical"; queryTerm = "fire"; }
+          else if (categoryId === "severeStorms") { typeLabel = "Severe Storm"; icon = "🌀"; severity = "Critical"; queryTerm = "storm"; }
+          else if (categoryId === "volcanoes") { typeLabel = "Volcano"; icon = "🌋"; severity = "High"; queryTerm = "volcano"; }
+          else if (categoryId === "floods") { typeLabel = "Flood"; icon = "🌊"; severity = "Critical"; queryTerm = "flood"; }
+          else if (categoryId === "earthquakes") { typeLabel = "Earthquake"; icon = "🫨"; severity = "High"; queryTerm = "earthquake"; }
+
+          return {
+            id: event.id,
+            type: `${icon} ${typeLabel}`,
+            queryTerm: queryTerm,
+            region: event.title, 
+            probability: 100,    
+            eta: "ACTIVE NOW",
+            severity: severity,
+            action: "Monitor & Prepare Local Response",
+            date: event.geometry[0]?.date ? new Date(event.geometry[0].date).toLocaleDateString() : "Recent"
+          };
+        });
+
+        // Injecting KSDMA alerts when Kerala Mode is ON
+        if (keralaMode) {
+             liveWarnings.unshift({
+                id: "KSDMA-001", type: "🌊 Flash Flood", queryTerm: "flood", region: "Wayanad, Kerala", probability: 85, eta: "2 Hours", severity: "Critical", action: "Evacuate Low-Lying Areas", date: new Date().toLocaleDateString()
+             });
+             liveWarnings.unshift({
+                id: "KSDMA-002", type: "🔥 Wildfire", queryTerm: "fire", region: "Idukki, Kerala", probability: 40, eta: "ACTIVE NOW", severity: "Medium", action: "Halt Hill Station Traffic", date: new Date().toLocaleDateString()
+             });
+        }
+
+        setPredictions(liveWarnings);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNASAData();
+  }, [keralaMode]);
+
+  // NEW: The Fact-Checking Engine
+  const verifyAlert = async (alert) => {
+    // Set status to scanning
+    setVerifications(prev => ({ ...prev, [alert.id]: { status: 'scanning', verdict: null, sources: [] } }));
+    
+    try {
+      // Clean up the region name for the search query (e.g., "Wayanad, Kerala" -> "Wayanad Kerala")
+      const cleanRegion = alert.region.replace(/,/g, '');
+      const rssUrl = encodeURIComponent(`https://news.google.com/rss/search?q=${alert.queryTerm}+${cleanRegion}&hl=en-IN&gl=IN&ceid=IN:en`);
+      
+      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+      const data = await response.json();
+
+      if (data.status === 'ok' && data.items.length > 0) {
+        // Check if the news is recent (within the last few days of 2026)
+        const recentNews = data.items.filter(item => {
+          const pubDate = new Date(item.pubDate);
+          const now = new Date();
+          const diffTime = Math.abs(now - pubDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+          return diffDays <= 3; // Only count news from the last 3 days
+        });
+
+        if (recentNews.length >= 2) {
+          // If 2 or more recent articles mention this disaster in this region -> TRUE
+          setVerifications(prev => ({ 
+            ...prev, 
+            [alert.id]: { 
+              status: 'done', 
+              verdict: 'TRUE', 
+              message: 'Media Consensus Reached. Event is actively being reported.',
+              sources: recentNews.slice(0, 2)
+            } 
+          }));
+        } else if (recentNews.length === 1) {
+          // If only 1 article mentions it -> UNVERIFIED / PROBABLY TRUE
+          setVerifications(prev => ({ 
+            ...prev, 
+            [alert.id]: { 
+              status: 'done', 
+              verdict: 'UNVERIFIED', 
+              message: 'Limited media coverage. Proceed with caution.',
+              sources: recentNews
+            } 
+          }));
+        } else {
+          // No recent articles -> NOT TRUE / FALSE ALARM
+          setVerifications(prev => ({ 
+            ...prev, 
+            [alert.id]: { 
+              status: 'done', 
+              verdict: 'NOT TRUE', 
+              message: 'No current media reports match this KSDMA alert. Possible false alarm.',
+              sources: []
+            } 
+          }));
+        }
+      } else {
+        // API failed or returned 0 items
+        setVerifications(prev => ({ 
+          ...prev, 
+          [alert.id]: { status: 'done', verdict: 'NOT TRUE', message: 'Zero correlating media reports found in this sector.', sources: [] } 
+        }));
+      }
+    } catch (error) {
+      setVerifications(prev => ({ 
+        ...prev, 
+        [alert.id]: { status: 'error', verdict: 'ERROR', message: 'Scanner failed to connect to media networks.', sources: [] } 
+      }));
+    }
+  };
+
+  const filteredPredictions = predictions.filter(pred => {
+    if (keralaMode) {
+        if (selectedRegion === "All Kerala") return pred.region.toLowerCase().includes("kerala") || pred.id.startsWith("KSDMA");
+        return pred.region.toLowerCase().includes(selectedRegion.toLowerCase());
+    } else {
+        if (selectedRegion === "All" || selectedRegion === "All Kerala") return true;
+        return pred.region.toLowerCase().includes(selectedRegion.toLowerCase());
+    }
+  });
+
   return (
     <div className="reports-container">
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--primary)", letterSpacing: 2, marginBottom: 8 }}>// PREDICTIVE ANALYTICS</div>
-      <div className="reports-header" style={{ marginBottom: 40 }}>
-        <div>
-          <h2>Early Warning System</h2>
-          <p>Analyzing weather patterns, geological sensors, and historical data to forecast imminent threats.</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: keralaMode ? "#00e676" : "var(--primary)", letterSpacing: 2 }}>
+            // {keralaMode ? "KERALA LOCALIZED FEED" : "GLOBAL SATELLITE FEED"}
+        </div>
+        <button onClick={() => { setKeralaMode(!keralaMode); setSelectedRegion(!keralaMode ? "All Kerala" : "All"); }}
+            style={{ background: keralaMode ? "rgba(0, 230, 118, 0.15)" : "var(--bg3)", border: `1px solid ${keralaMode ? "#00e676" : "var(--border)"}`, color: keralaMode ? "#00e676" : "var(--muted)", padding: "8px 16px", borderRadius: "20px", fontSize: "12px", fontWeight: 700, cursor: "pointer", transition: "all 0.3s" }}>
+            {keralaMode ? "🌴 Kerala Focus: ON" : "🌴 Enable Kerala Focus"}
+        </button>
+      </div>
+      
+      <div className="reports-header" style={{ marginBottom: 40, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "20px" }}>
+        <div><h2>Early Warning System</h2></div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <select className="form-select" style={{ width: "220px", padding: "10px 16px", background: "var(--bg2)", cursor: "pointer" }} value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+            {(keralaMode ? KERALA_DISTRICTS : COUNTRIES).map(loc => <option key={loc} value={loc}>{loc === "All" ? "Global (All Regions)" : loc}</option>)}
+          </select>
         </div>
       </div>
 
-      <div className="prediction-grid">
-        {SAMPLE_PREDICTIONS.map((pred) => (
-          <div key={pred.id} className={`predict-card ${pred.severity}`}>
-            <div className="predict-header">
-              <div className="predict-type">
-                {pred.type === "Flash Flood" ? "🌊" : pred.type === "Wildfire Spread" ? "🔥" : pred.type === "Cyclone Landfall" ? "🌀" : "⚠️"} 
-                {pred.type}
-              </div>
-              <div className="predict-eta">ETA: {pred.eta}</div>
-            </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--primary)" }}><h3>Connecting to Telemetry...</h3></div>
+      ) : (
+        <div className="prediction-grid">
+          {filteredPredictions.map((pred) => {
+            const verification = verifications[pred.id];
             
-            <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 16 }}>
-              📍 <strong>Predicted Impact Zone:</strong> {pred.region}
-            </div>
+            return (
+              <div key={pred.id} className={`predict-card ${pred.severity}`} style={{ animation: "fadeIn 0.5s ease-out", display: "flex", flexDirection: "column" }}>
+                <div className="predict-header">
+                  <div className="predict-type">{pred.type}</div>
+                  <div className="predict-eta">{pred.eta}</div>
+                </div>
+                
+                <div style={{ fontSize: 14, color: "var(--text)", marginBottom: 16, fontWeight: 600 }}>📍 {pred.region}</div>
+                
+                <div style={{ marginBottom: 20 }}>
+                  <div className="prob-label"><span>Authority Confidence</span><span>{pred.probability}%</span></div>
+                  <div className="prob-bar-bg"><div className="prob-bar-fill" style={{ width: `${pred.probability}%`, background: "var(--primary)" }} /></div>
+                </div>
 
-            <div>
-              <div className="prob-label">
-                <span>Probability of Event</span>
-                <span style={{ color: pred.probability > 75 ? "var(--red)" : "var(--primary)" }}>{pred.probability}%</span>
+                {/* FACT CHECKING UI */}
+                <div style={{ background: "var(--bg3)", borderRadius: "8px", padding: "12px", marginTop: "auto", border: "1px solid var(--border)" }}>
+                  {!verification ? (
+                     <button onClick={() => verifyAlert(pred)} style={{ width: "100%", background: "transparent", color: "var(--primary)", border: "1px dashed var(--primary)", padding: "8px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                       🔍 VERIFY VIA LOCAL MEDIA
+                     </button>
+                  ) : verification.status === 'scanning' ? (
+                     <div style={{ textAlign: "center", fontSize: "12px", color: "var(--amber)", fontFamily: "var(--font-mono)", animation: "pulse 1.5s infinite" }}>
+                       📡 CROSS-REFERENCING NEWS...
+                     </div>
+                  ) : (
+                     <div>
+                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                         {verification.verdict === 'TRUE' && <span style={{ background: "#00e676", color: "#000", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 800 }}>✅ TRUE</span>}
+                         {verification.verdict === 'NOT TRUE' && <span style={{ background: "var(--red)", color: "#fff", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 800 }}>❌ NOT TRUE</span>}
+                         {verification.verdict === 'UNVERIFIED' && <span style={{ background: "var(--amber)", color: "#000", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 800 }}>⚠️ UNVERIFIED</span>}
+                       </div>
+                       <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.4, marginBottom: "8px" }}>{verification.message}</p>
+                       
+                       {verification.sources.length > 0 && (
+                         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px" }}>
+                           <span style={{ fontSize: "10px", textTransform: "uppercase", color: "var(--muted)" }}>Sources:</span>
+                           {verification.sources.map((src, i) => (
+                             <a key={i} href={src.link} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: "11px", color: "var(--primary)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "4px" }}>
+                               ↗ {src.source}: {src.title}
+                             </a>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                  )}
+                </div>
               </div>
-              <div className="prob-bar-bg">
-                <div 
-                  className="prob-bar-fill" 
-                  style={{ 
-                    width: `${pred.probability}%`, 
-                    background: pred.probability > 75 ? "var(--red)" : pred.probability > 50 ? "var(--primary)" : "var(--amber)"
-                  }} 
-                />
-              </div>
-            </div>
-
-            <div className="predict-action">
-              <span>{pred.probability > 75 ? "🚨" : "📢"}</span> 
-              {pred.action}
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
-
 function LandingPage({ onNavigate }) {
   return (
     <div>
@@ -621,7 +956,7 @@ function LandingPage({ onNavigate }) {
       </div>
 
       <div className="stats-bar">
-        {[["847", "Active SOS"], ["12,404", "People Rescued"], ["38", "Teams Deployed"], ["4m", "Avg Response Time"]].map(([n, l]) => (
+        {[["--", "Active SOS"], ["----", "People Rescued"], ["--", "Teams Deployed"], ["--", "Avg Response Time"]].map(([n, l]) => (
           <div className="stat-item" key={l}>
             <div className="stat-num">{n}</div>
             <div className="stat-label">{l}</div>
@@ -667,20 +1002,104 @@ function ReportForm({ onSuccess }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reportId] = useState("SOS-" + String(Math.floor(Math.random() * 900) + 100));
+  
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // NEW: State for GPS Coordinates
+  const [gps, setGps] = useState({ lat: null, lng: null });
+  const [gpsStatus, setGpsStatus] = useState("");
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   
   const toggleNeed = (need) => {
-    setForm(f => ({
-      ...f,
-      needs: f.needs.includes(need) ? f.needs.filter(n => n !== need) : [...f.needs, need]
-    }));
+    setForm(f => ({ ...f, needs: f.needs.includes(need) ? f.needs.filter(n => n !== need) : [...f.needs, need] }));
   };
 
-  const handleSubmit = () => {
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  // NEW: Function to ask the browser for the user's exact location
+  const handleGetLocation = (e) => {
+    e.preventDefault();
+    setGpsStatus("Locating satellite...");
+    if (!navigator.geolocation) {
+      setGpsStatus("Geolocation not supported by browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGps({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setGpsStatus(`Locked: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
+      },
+      (error) => {
+        setGpsStatus("Failed to acquire signal. Check permissions.");
+      }
+    );
+  };
+
+  const handleSubmit = async () => {
     if (!form.title || !form.category || !form.location) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSubmitted(true); }, 1600);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      alert("You must be logged in to send an SOS.");
+      setLoading(false);
+      return;
+    }
+
+    let uploadedImageUrl = null;
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('report_images')
+        .upload(fileName, imageFile);
+
+      if (uploadError) {
+        alert("Failed to upload image: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+      const { data } = supabase.storage.from('report_images').getPublicUrl(fileName);
+      uploadedImageUrl = data.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from('reports')
+      .insert([
+        { 
+          tracking_id: reportId,
+          title: form.title, 
+          category: form.category, 
+          location: form.location, 
+          priority: form.priority,
+          description: form.description,
+          needs: form.needs,
+          user_id: session.user.id,
+          image_url: uploadedImageUrl,
+          // NEW: Send the lat and lng to the database
+          lat: gps.lat,
+          lng: gps.lng
+        }
+      ]);
+
+    setLoading(false);
+
+    if (error) {
+      alert("Failed to send SOS: " + error.message);
+    } else {
+      setSubmitted(true);
+    }
   };
 
   if (submitted) return (
@@ -694,7 +1113,7 @@ function ReportForm({ onSuccess }) {
           <p style={{ marginBottom: 24 }}>Stay calm and remain in the safest possible location. Help is being organized.</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <button className="btn-primary" onClick={() => onSuccess(reportId)}>Track Rescue Status →</button>
-            <button className="btn-outline" onClick={() => setSubmitted(false)}>Submit Another</button>
+            <button className="btn-outline" onClick={() => { setSubmitted(false); setImageFile(null); setImagePreview(null); setGps({lat: null, lng: null}); setGpsStatus(""); }}>Submit Another</button>
           </div>
         </div>
       </div>
@@ -714,6 +1133,7 @@ function ReportForm({ onSuccess }) {
           <label className="form-label">Situation Title *</label>
           <input className="form-input" placeholder="e.g. 5 People trapped on roof" value={form.title} onChange={e => set("title", e.target.value)} />
         </div>
+        
         <div className="form-row">
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Disaster Type *</label>
@@ -723,9 +1143,23 @@ function ReportForm({ onSuccess }) {
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Location *</label>
-            <input className="form-input" placeholder="Street, landmark, coordinates" value={form.location} onChange={e => set("location", e.target.value)} />
+            <label className="form-label">Written Location *</label>
+            <input className="form-input" placeholder="Street or landmark" value={form.location} onChange={e => set("location", e.target.value)} />
           </div>
+        </div>
+
+        {/* NEW: GPS Coordinate Fetcher */}
+        <div className="form-group" style={{ marginTop: 24, background: "var(--bg)", padding: 16, borderRadius: 10, border: "1px dashed var(--border)" }}>
+           <label className="form-label" style={{ color: "var(--primary)" }}>Precise GPS Coordinates</label>
+           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>Rescue teams rely on exact coordinates to find you faster.</p>
+           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={handleGetLocation} className="btn-outline" style={{ padding: "8px 16px", fontSize: 13, margin: 0 }}>
+                📍 Acquire GPS Lock
+              </button>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: gps.lat ? "#00e676" : "var(--muted)" }}>
+                {gpsStatus || "Awaiting signal..."}
+              </span>
+           </div>
         </div>
         
         <div className="form-group" style={{ marginTop: 24 }}>
@@ -738,6 +1172,21 @@ function ReportForm({ onSuccess }) {
                 {p}
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginTop: 32 }}>
+          <label className="form-label">Photographic Evidence (Optional)</label>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 4 }}>Upload a photo of the situation to help rescue teams prepare.</p>
+          <div className="image-upload-area">
+            <input type="file" accept="image/*" className="image-upload-input" onChange={handleImageSelect} />
+            <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Click or drag an image here</div>
+            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>JPG, PNG up to 5MB</div>
+            
+            {imagePreview && (
+              <img src={imagePreview} alt="Preview" className="image-preview" />
+            )}
           </div>
         </div>
 
@@ -785,8 +1234,44 @@ function ReportsView({ onTrack }) {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [upvoted, setUpvoted] = useState({});
+  const [liveReports, setLiveReports] = useState([]);
 
-  const filtered = SAMPLE_REPORTS.filter(r => {
+  useEffect(() => {
+    const fetchLiveReports = async () => {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data && data.length > 0) {
+        const formattedData = data.map(d => ({
+          id: d.tracking_id,
+          title: d.title,
+          category: d.category,
+          status: d.status || "SOS Sent",
+          date: new Date(d.created_at).toISOString().split('T')[0],
+          location: d.location,
+          priority: d.priority,
+          description: d.description,
+          needs: d.needs || [],
+          image_url: d.image_url, 
+          upvotes: 0,
+          // STRICT MAPPING: We only use exactly what is in your database. No faking it.
+          lat: d.lat, 
+          lng: d.lng 
+        })).filter(report => report.lat !== null && report.lng !== null); // Hide reports that have no GPS data
+
+        // Set the state to ONLY use real database reports. Goodbye fake samples!
+        setLiveReports(formattedData); 
+      } else {
+        setLiveReports([]);
+      }
+    };
+    
+    fetchLiveReports();
+  }, []);
+
+  const filtered = liveReports.filter(r => {
     if (statusFilter !== "All" && r.status !== statusFilter) return false;
     if (categoryFilter !== "All" && r.category !== categoryFilter) return false;
     if (search && !r.title.toLowerCase().includes(search.toLowerCase()) && !r.location.toLowerCase().includes(search.toLowerCase())) return false;
@@ -799,6 +1284,18 @@ function ReportsView({ onTrack }) {
   };
 
   const categories = ["All", ...CATEGORIES.slice(0, 6)];
+
+  // NEW: Dynamic Map Math
+  // We calculate the minimum and maximum coordinates of all currently filtered reports
+  // to create a dynamic bounding box so the pins always fit on screen.
+  const minLat = filtered.length > 0 ? Math.min(...filtered.map(r => r.lat)) : 0;
+  const maxLat = filtered.length > 0 ? Math.max(...filtered.map(r => r.lat)) : 0;
+  const minLng = filtered.length > 0 ? Math.min(...filtered.map(r => r.lng)) : 0;
+  const maxLng = filtered.length > 0 ? Math.max(...filtered.map(r => r.lng)) : 0;
+  
+  // Add a tiny bit of padding so if there is only 1 report, we don't divide by zero
+  const latDiff = (maxLat - minLat) || 0.02; 
+  const lngDiff = (maxLng - minLng) || 0.02;
 
   return (
     <div className="reports-container">
@@ -831,34 +1328,20 @@ function ReportsView({ onTrack }) {
       </div>
 
       {viewMode === "map" && (
-        <div className="map-container">
-          <div className="map-area">
-            <div className="map-grid-bg" />
-            <div className="map-radar" />
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ opacity: 0.03, fontSize: 240, userSelect: "none", filter: "blur(2px)" }}>🗺</div>
-            </div>
-            <div style={{ position: "absolute", top: 16, left: 16, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--primary)", letterSpacing: 1, background: "rgba(18,16,15,0.8)", padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", backdropFilter: "blur(4px)" }}>
-              RADAR: RELIEF SECTOR ALPHA — {filtered.length} SIGNALS
-            </div>
-            {filtered.map((r, i) => {
-              const x = 10 + ((r.lng - 77.15) / 0.12) * 80;
-              const y = 15 + ((r.lat - 28.55) / 0.12) * 70;
-              return (
-                <div key={r.id} className="map-pin" style={{ left: `${Math.max(5, Math.min(92, x))}%`, top: `${Math.max(5, Math.min(88, y))}%` }} onClick={() => onTrack(r.id)}>
-                  <div className="map-pin-inner" style={{ background: PRIORITY_COLOR[r.priority], color: PRIORITY_COLOR[r.priority] }} />
-                  <div className="map-pin-label">{r.id} · {r.title.slice(0, 20)}...</div>
-                </div>
-              );
-            })}
-            <div className="map-legend">
-              {Object.entries(PRIORITY_COLOR).map(([p, c]) => (
-                <div key={p} className="map-legend-item">
-                  <div className="legend-dot" style={{ background: c, color: c }} /> {p} Priority
-                </div>
-              ))}
-            </div>
+        <div style={{ marginBottom: "20px", position: "relative" }}>
+          
+          {/* 1. The Real Interactive Map Component */}
+          <LiveMap reports={filtered} onMarkerClick={onTrack} />
+          
+          {/* 2. The Floating Priority Legend */}
+          <div style={{ position: "absolute", bottom: 16, right: 16, background: "rgba(18,16,15,0.95)", border: "1px solid var(--border)", borderRadius: "10px", padding: "12px 16px", backdropFilter: "blur(4px)", zIndex: 1000 }}>
+            {Object.entries(PRIORITY_COLOR).map(([p, c]) => (
+              <div key={p} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "var(--text)", marginBottom: "8px", fontFamily: "var(--font-mono)", fontWeight: 600 }}>
+                <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: c, boxShadow: `0 0 8px ${c}` }} /> {p} Priority
+              </div>
+            ))}
           </div>
+
         </div>
       )}
 
@@ -866,28 +1349,32 @@ function ReportsView({ onTrack }) {
         <div className="reports-grid">
           {filtered.map(r => (
             <div key={r.id} className="report-card" onClick={() => onTrack(r.id)}>
-              <div className="report-card-top">
-                <div>
-                  <div className="report-id">{r.id}</div>
-                </div>
-                <StatusBadge status={r.status} />
-              </div>
-              <div className="report-title">{r.title}</div>
-              <div className="report-meta">
-                <span><div className="priority-dot" style={{ background: PRIORITY_COLOR[r.priority] }} /> {r.priority}</span>
-                <span>📍 {r.location}</span>
-                <span>🏷 {r.category}</span>
-              </div>
+              {r.image_url && <img src={r.image_url} alt="Disaster Area" className="report-card-image" />}
               
-              <div className="needs-list">
-                {r.needs && r.needs.map(n => <span key={n} className="need-badge">{n}</span>)}
-              </div>
+              <div className="report-card-body">
+                <div className="report-card-top">
+                  <div>
+                    <div className="report-id">{r.id}</div>
+                  </div>
+                  <StatusBadge status={r.status} />
+                </div>
+                <div className="report-title">{r.title}</div>
+                <div className="report-meta">
+                  <span><div className="priority-dot" style={{ background: PRIORITY_COLOR[r.priority] }} /> {r.priority}</span>
+                  <span>📍 {r.location}</span>
+                  <span>🏷 {r.category}</span>
+                </div>
+                
+                <div className="needs-list">
+                  {r.needs && r.needs.map(n => <span key={n} className="need-badge">{n}</span>)}
+                </div>
 
-              <div className="report-footer">
-                <button className="upvote-btn" onClick={e => handleUpvote(r.id, e)} style={upvoted[r.id] ? { color: "var(--primary)", borderColor: "rgba(255,106,0,0.4)" } : {}}>
-                  ▲ Verify Info ({r.upvotes + (upvoted[r.id] ? 1 : 0)})
-                </button>
-                <span className="report-date">{r.date}</span>
+                <div className="report-footer">
+                  <button className="upvote-btn" onClick={e => handleUpvote(r.id, e)} style={upvoted[r.id] ? { color: "var(--primary)", borderColor: "rgba(255,106,0,0.4)" } : {}}>
+                    ▲ Verify Info ({r.upvotes + (upvoted[r.id] ? 1 : 0)})
+                  </button>
+                  <span className="report-date">{r.date}</span>
+                </div>
               </div>
             </div>
           ))}
@@ -931,15 +1418,495 @@ function ReportsView({ onTrack }) {
   );
 }
 
+function RequestsView({ session, onNavigate }) {
+  const [liveRequests, setLiveRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNeeds = async () => {
+      const { data } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (data) {
+        setLiveRequests(data.filter(r => r.needs && r.needs.length > 0));
+      }
+      setLoading(false);
+    };
+    fetchNeeds();
+  }, []);
+
+  return (
+    <div className="reports-container">
+      <div className="reports-header" style={{ marginBottom: 40 }}>
+        <div>
+          <h2>Volunteer & Donate</h2>
+          <p>Directly support ongoing relief efforts by fulfilling specific community requests.</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", color: "var(--primary)", padding: "40px" }}>⏳ Scanning for active requests...</div>
+      ) : (
+        <div className="request-grid">
+          {liveRequests.map(req => {
+            const isVolunteer = req.needs.includes("Volunteers") || req.needs.includes("Search & Rescue");
+            const cardType = isVolunteer ? "Volunteer" : "Donate";
+            
+            return (
+              <div key={req.id} className="req-card">
+                <div className="req-header">
+                  <span className={`req-type ${cardType}`}>{cardType}</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>⚡ {req.priority}</span>
+                </div>
+                <h3 className="req-title">{req.title}</h3>
+                <p className="req-desc">{req.description || "Emergency support required at this location."}</p>
+                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>📍 {req.location}</div>
+                
+                {/* UPDATE: This now navigates to the new full page, passing the specific ID */}
+                <button className={`req-btn ${cardType}`} onClick={() => onNavigate("request-detail", req.id)}>
+                  View Details & Support
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DashboardView({ onNavigate, session }) {
+  const [activeTab, setActiveTab] = useState("works");
+  const [loading, setLoading] = useState(false);
+
+  // Form States
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [deleteMethod, setDeleteMethod] = useState("password");
+  const [deletePassword, setDeletePassword] = useState("");
+  
+  // Unified Data States
+  const [myCommitments, setMyCommitments] = useState([]); 
+  const [myRequests, setMyRequests] = useState([]); 
+  const [loadingData, setLoadingData] = useState(false);
+  
+  // NEW: State for the Contact Modal
+  const [contactModal, setContactModal] = useState(null);
+  
+  useEffect(() => {
+    if (session) fetchDashboardData();
+  }, [session]);
+
+  const fetchDashboardData = async () => {
+    setLoadingData(true);
+    
+    // Fetch commitments
+    const { data: commitmentsData } = await supabase
+      .from('report_volunteers')
+      .select('id, reports (*)')
+      .eq('user_id', session.user.id);
+
+    if (commitmentsData) {
+      setMyCommitments(commitmentsData.map(d => d.reports).filter(Boolean)); 
+    }
+
+    // Fetch the user's own SOS requests
+    const { data: requestsData } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if (requestsData) {
+      setMyRequests(requestsData);
+    }
+
+    setLoadingData(false);
+  };
+
+  const handleRemoveCommitment = async (reportId) => {
+    if (!confirm("Are you sure you want to withdraw from this mission?")) return;
+    setLoadingData(true);
+    
+    const { error } = await supabase
+      .from('report_volunteers')
+      .delete()
+      .match({ report_id: reportId, user_id: session.user.id });
+
+    if (error) alert("Error removing mission: " + error.message);
+    else setMyCommitments(prev => prev.filter(report => report.id !== reportId));
+    
+    setLoadingData(false);
+  };
+
+  const handleDeleteMyRequest = async (reportId) => {
+    if (!confirm("Are you sure you want to permanently delete this SOS request?")) return;
+    setLoadingData(true);
+
+    const { error } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', reportId);
+
+    if (error) alert("Error deleting SOS: " + error.message);
+    else setMyRequests(prev => prev.filter(report => report.id !== reportId));
+
+    setLoadingData(false);
+  };
+
+  if (!session) return <div style={{ padding: 100, textAlign: "center" }}>Loading secure dashboard...</div>;
+
+  const volunteerWorks = myCommitments.filter(r => r.needs && (r.needs.includes("Volunteers") || r.needs.includes("Search & Rescue")));
+  const donationWorks = myCommitments.filter(r => r.needs && !(r.needs.includes("Volunteers") || r.needs.includes("Search & Rescue")));
+
+  const handlePasswordReset = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(session.user.email, { redirectTo: window.location.origin + '/dashboard' });
+    setLoading(false);
+    if (error) alert("Error: " + error.message); else alert("✅ Password reset link has been sent to your email!");
+  };
+
+  const handleChangeEmail = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email: session.user.email, password: emailPassword });
+    if (verifyError) { setLoading(false); return alert("❌ Incorrect current password. Cannot change email."); }
+    const { error: updateError } = await supabase.auth.updateUser({ email: newEmail });
+    setLoading(false);
+    if (updateError) alert("Error: " + updateError.message);
+    else { alert("✅ Security emails sent! Check both inboxes to confirm."); setNewEmail(""); setEmailPassword(""); }
+  };
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    if (!confirm("Are you absolutely sure? This cannot be undone.")) return;
+    setLoading(true);
+    if (deleteMethod === "password") {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email: session.user.email, password: deletePassword });
+      if (verifyError) { setLoading(false); return alert("❌ Incorrect password."); }
+      const { error: deleteError } = await supabase.rpc('delete_user');
+      if (deleteError) { setLoading(false); return alert("Failed: " + deleteError.message); }
+      await supabase.auth.signOut(); window.location.reload();
+    } else {
+      setTimeout(() => { setLoading(false); alert("✉️ A final deletion link has been sent to your email."); setDeletePassword(""); }, 1500);
+    }
+  };
+
+  return (
+    <div className="dashboard-layout">
+      <div className="dash-sidebar">
+        <div className="dash-section-title">Activity</div>
+        <button className={`dash-tab ${activeTab === "works" ? "active" : ""}`} onClick={() => setActiveTab("works")}>🏢 Works Part Of</button>
+        <button className={`dash-tab ${activeTab === "donations" ? "active" : ""}`} onClick={() => setActiveTab("donations")}>📦 My Donations</button>
+        <button className={`dash-tab ${activeTab === "requests" ? "active" : ""}`} onClick={() => setActiveTab("requests")}>📡 My Requests</button>
+        
+        <button className="dash-tab" onClick={() => onNavigate("report")}>➕ Add Request</button>
+
+        <div className="dash-section-title" style={{ marginTop: 24 }}>Security & Account</div>
+        <button className={`dash-tab ${activeTab === "email" ? "active" : ""}`} onClick={() => setActiveTab("email")}>✉️ Change Email</button>
+        <button className={`dash-tab ${activeTab === "password" ? "active" : ""}`} onClick={() => setActiveTab("password")}>🔑 Change Password</button>
+        <button className={`dash-tab ${activeTab === "delete" ? "active" : ""}`} style={{ color: activeTab === "delete" ? "var(--red)" : "" }} onClick={() => setActiveTab("delete")}>⚠️ Delete Account</button>
+      </div>
+
+      <div className="dash-content">
+
+        {/* --- 1. WORKS PART OF TAB --- */}
+        {activeTab === "works" && (
+          <div style={{ animation: "fadeIn 0.2s" }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>My Active Missions</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>Physical volunteering and rescue efforts you are committed to.</p>
+
+            {loadingData ? <p style={{ color: "var(--primary)" }}>⏳ Loading...</p> : 
+             volunteerWorks.length === 0 ? (
+              <div className="dev-placeholder" style={{ background: "transparent" }}>
+                <p>You haven't signed up for any field operations yet.</p>
+                <button className="btn-outline" style={{ marginTop: 16 }} onClick={() => onNavigate("requests")}>Find Opportunities</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {volunteerWorks.map(report => (
+                  <div key={report.id} style={{ background: "var(--bg3)", padding: 20, borderRadius: 12, border: "1px solid var(--border)" }}>
+                    
+                    {/* TOP ROW: Title & Buttons */}
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <h3 style={{ fontSize: 18, fontWeight: 700 }}>{report.title}</h3>
+                        <span style={{ fontSize: 12, color: "var(--primary)", fontFamily: "var(--font-mono)" }}>{report.tracking_id}</span>
+                      </div>
+                      
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <a 
+                          href={`mailto:emergency-contact@relieftrack.org?subject=ReliefTrack%20Help%3A%20${encodeURIComponent(report.title)}&body=Hello%20${encodeURIComponent(report.name || "there")}%2C%0D%0A%0D%0AI%20am%20reaching%20out%20via%20ReliefTrack%20regarding%20your%20SOS%20request.%20How%20can%20I%20best%20assist%20you%3F`} 
+                          style={{ background: "transparent", border: "1px solid rgba(0,230,118,0.4)", color: "var(--green)", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s", textDecoration: "none", display: "inline-block" }}
+                          onMouseOver={e => { e.target.style.background = "rgba(0,230,118,0.1)"; e.target.style.borderColor = "var(--green)"; }}
+                          onMouseOut={e => { e.target.style.background = "transparent"; e.target.style.borderColor = "rgba(0,230,118,0.4)"; }}
+                        >
+                          ✉️ Send Email
+                        </a>
+                        <button 
+                          onClick={() => handleRemoveCommitment(report.id)} 
+                          style={{ background: "transparent", border: "1px solid rgba(255,68,68,0.4)", color: "var(--red)", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+                          onMouseOver={e => { e.target.style.background = "rgba(255,68,68,0.1)"; e.target.style.borderColor = "var(--red)"; }}
+                          onMouseOut={e => { e.target.style.background = "transparent"; e.target.style.borderColor = "rgba(255,68,68,0.4)"; }}
+                        >
+                          Leave Mission
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* BOTTOM ROW: Location & Tags */}
+                    <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>📍 {report.location}</p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {report.needs && report.needs.map(n => <span key={n} style={{ fontSize: 11, padding: "4px 8px", background: "var(--bg)", borderRadius: 4, border: "1px solid var(--border)" }}>{n}</span>)}
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- 2. MY DONATIONS TAB --- */}
+        {activeTab === "donations" && (
+          <div style={{ animation: "fadeIn 0.2s" }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>My Pledged Donations</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>Supplies and resources you have committed to provide.</p>
+
+            {loadingData ? <p style={{ color: "var(--primary)" }}>⏳ Loading...</p> : 
+             donationWorks.length === 0 ? (
+              <div className="dev-placeholder" style={{ background: "transparent" }}>
+                <p>You haven't pledged any donations yet.</p>
+                <button className="btn-outline" style={{ marginTop: 16 }} onClick={() => onNavigate("requests")}>View Needs</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {donationWorks.map(report => (
+                  <div key={report.id} style={{ background: "var(--bg3)", padding: 20, borderRadius: 12, border: "1px solid var(--border)" }}>
+                    
+                    {/* TOP ROW: Title & Buttons */}
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <h3 style={{ fontSize: 18, fontWeight: 700 }}>{report.title}</h3>
+                        <span style={{ fontSize: 12, color: "var(--primary)", fontFamily: "var(--font-mono)" }}>{report.tracking_id}</span>
+                      </div>
+                      
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <a 
+                          href={`mailto:emergency-contact@relieftrack.org?subject=ReliefTrack%20Help%3A%20${encodeURIComponent(report.title)}&body=Hello%20${encodeURIComponent(report.name || "there")}%2C%0D%0A%0D%0AI%20am%20reaching%20out%20via%20ReliefTrack%20regarding%20your%20SOS%20request.%20How%20can%20I%20best%20assist%20you%3F`} 
+                          style={{ background: "transparent", border: "1px solid rgba(0,230,118,0.4)", color: "var(--green)", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s", textDecoration: "none", display: "inline-block" }}
+                          onMouseOver={e => { e.target.style.background = "rgba(0,230,118,0.1)"; e.target.style.borderColor = "var(--green)"; }}
+                          onMouseOut={e => { e.target.style.background = "transparent"; e.target.style.borderColor = "rgba(0,230,118,0.4)"; }}
+                        >
+                          ✉️ Send Email
+                        </a>
+                        <button 
+                          onClick={() => handleRemoveCommitment(report.id)} 
+                          style={{ background: "transparent", border: "1px solid rgba(255,68,68,0.4)", color: "var(--red)", padding: "6px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+                          onMouseOver={e => { e.target.style.background = "rgba(255,68,68,0.1)"; e.target.style.borderColor = "var(--red)"; }}
+                          onMouseOut={e => { e.target.style.background = "transparent"; e.target.style.borderColor = "rgba(255,68,68,0.4)"; }}
+                        >
+                          Cancel Pledge
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* BOTTOM ROW: Location & Tags */}
+                    <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>📍 Drop-off: {report.location}</p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {report.needs && report.needs.map(n => <span key={n} style={{ fontSize: 11, padding: "4px 8px", background: "var(--bg)", borderRadius: 4, border: "1px solid var(--border)" }}>{n}</span>)}
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- 3. MY REQUESTS TAB (SOS Calls) --- */}
+        {activeTab === "requests" && (
+          <div style={{ animation: "fadeIn 0.2s" }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>My SOS Broadcasts</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>Emergency requests you have broadcasted to the network.</p>
+
+            {loadingData ? <p style={{ color: "var(--primary)" }}>⏳ Loading...</p> : 
+             myRequests.length === 0 ? (
+              <div className="dev-placeholder" style={{ background: "transparent" }}>
+                <p>You have no active emergency broadcasts.</p>
+                <button className="btn-primary" style={{ marginTop: 16 }} onClick={() => onNavigate("report")}>🚨 Send SOS</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {myRequests.map(report => (
+                  <div key={report.id} style={{ background: "var(--bg2)", padding: 24, borderRadius: 12, border: "1px solid var(--border)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{report.title}</h3>
+                        <span style={{ fontSize: 12, color: "var(--primary)", fontFamily: "var(--font-mono)", marginRight: 12 }}>{report.tracking_id}</span>
+                        <StatusBadge status={report.status || "SOS Sent"} />
+                      </div>
+                      
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => onNavigate("tracker", report.tracking_id)} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Track Status</button>
+                        <button onClick={() => handleDeleteMyRequest(report.id)} style={{ background: "var(--red)", border: "none", color: "#fff", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Resolve / Delete</button>
+                      </div>
+                    </div>
+                    
+                    <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 16 }}>📍 {report.location}</p>
+                    
+                    {report.needs && report.needs.length > 0 && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {report.needs.map(n => <span key={n} style={{ fontSize: 11, padding: "4px 8px", background: "rgba(255,106,0,0.1)", color: "var(--primary)", border: "1px solid rgba(255,106,0,0.3)", borderRadius: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}>{n}</span>)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- SECURITY TABS --- */}
+        {activeTab === "password" && (
+          <div>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Change Password</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>For your security, password resets are handled via secure email links.</p>
+            <div style={{ background: "var(--bg3)", padding: 32, borderRadius: 16, border: "1px solid var(--border)" }}>
+              <h4 style={{ fontSize: 16, marginBottom: 12 }}>Current Email: <span style={{ color: "var(--primary)", fontFamily: "var(--font-mono)" }}>{session.user.email}</span></h4>
+              <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Click the button below to receive a secure link to choose a new password. You will be logged out of other devices.</p>
+              <button className="submit-btn" style={{ width: "auto", padding: "12px 32px", marginTop: 0 }} onClick={handlePasswordReset} disabled={loading}>{loading ? "Sending..." : "✉️ Send Password Reset Email"}</button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "email" && (
+          <div>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Update Email Address</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>Move your account to a new primary email address.</p>
+            <form onSubmit={handleChangeEmail} style={{ background: "var(--bg3)", padding: 32, borderRadius: 16, border: "1px solid var(--border)" }}>
+              <div className="form-group"><label className="form-label">New Email Address</label><input type="email" className="form-input" placeholder="new.email@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} required /></div>
+              <div className="form-group" style={{ marginBottom: 24 }}><label className="form-label">Verify Current Password</label><input type="password" className="form-input" placeholder="To confirm it's you..." value={emailPassword} onChange={e => setEmailPassword(e.target.value)} required /></div>
+              <button type="submit" className="submit-btn" style={{ width: "auto", padding: "12px 32px", marginTop: 0 }} disabled={loading}>{loading ? "Verifying..." : "Update Email"}</button>
+            </form>
+          </div>
+        )}
+
+        {activeTab === "delete" && (
+          <div>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--red)", marginBottom: 8 }}>Delete Account</h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>Permanently remove your account and all associated data.</p>
+            <div style={{ border: "1px dashed var(--red)", padding: 32, borderRadius: 16, background: "rgba(255,68,68,0.02)" }}>
+              <div style={{ display: "flex", gap: 20, marginBottom: 24 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: deleteMethod === "password" ? "var(--text)" : "var(--muted)" }}><input type="radio" checked={deleteMethod === "password"} onChange={() => setDeleteMethod("password")} style={{ accentColor: "var(--red)" }} /> Verify via Password</label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: deleteMethod === "email" ? "var(--text)" : "var(--muted)" }}><input type="radio" checked={deleteMethod === "email"} onChange={() => setDeleteMethod("email")} style={{ accentColor: "var(--red)" }} /> Verify via Email Link</label>
+              </div>
+              <form onSubmit={handleDeleteAccount}>
+                {deleteMethod === "password" && <div className="form-group" style={{ marginBottom: 24 }}><label className="form-label" style={{ color: "var(--red)" }}>Enter Current Password</label><input type="password" className="form-input" placeholder="••••••••" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} required /></div>}
+                {deleteMethod === "email" && <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>We will send a final confirmation link to <strong>{session.user.email}</strong>. Your account will remain active until you click that link.</p>}
+                <button type="submit" className="submit-btn" style={{ width: "auto", padding: "12px 32px", marginTop: 0, background: "transparent", color: "var(--red)", border: "1px solid var(--red)" }} disabled={loading}>{loading ? "Processing..." : deleteMethod === "password" ? "Permanently Delete Account" : "✉️ Send Deletion Link"}</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* NEW: Contact Modal Popup */}
+      {/* NEW: Contact Modal Popup */}
+      {contactModal && (
+        <div className="modal-overlay" onClick={() => setContactModal(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <button className="modal-close" onClick={() => setContactModal(null)}>&times;</button>
+            <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Contact Requester</h3>
+            <p style={{ color: "var(--muted)", marginBottom: 32, fontSize: 15 }}>
+              Reach out to coordinate your relief efforts for <strong>{contactModal.title}</strong>.
+            </p>
+
+            <div style={{ background: "var(--bg3)", padding: 20, borderRadius: 12, marginBottom: 16, border: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4, fontFamily: "var(--font-mono)" }}>Contact Name</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{contactModal.name || "Anonymous Requester"}</div>
+            </div>
+
+            <div style={{ background: "var(--bg3)", padding: 20, borderRadius: 12, border: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4, fontFamily: "var(--font-mono)" }}>Phone / Radio Freq</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>{contactModal.phone || "No phone provided"}</div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+              {contactModal.phone && (
+                <a 
+                  href={`tel:${contactModal.phone}`} 
+                  className="submit-btn" 
+                  style={{ flex: 1, textDecoration: "none", textAlign: "center", marginTop: 0 }}
+                >
+                  📞 Call Now
+                </a>
+              )}
+              
+              {/* NEW: Pre-filled Email Button */}
+              <a 
+                href={`mailto:emergency-contact@relieftrack.org?subject=ReliefTrack%20Help%3A%20${encodeURIComponent(contactModal.title)}&body=Hello%20${encodeURIComponent(contactModal.name || "there")}%2C%0D%0A%0D%0AI%20am%20reaching%20out%20via%20ReliefTrack%20regarding%20your%20SOS%20request.%20How%20can%20I%20best%20assist%20you%3F`} 
+                className="btn-outline" 
+                style={{ flex: 1, textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", margin: 0 }}
+              >
+                ✉️ Send Email
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}            
+
 function TrackerView({ preloadId = "" }) {
   const [query, setQuery] = useState(preloadId);
-  const [tracked, setTracked] = useState(preloadId ? SAMPLE_REPORTS.find(r => r.id === preloadId) || null : null);
+  const [tracked, setTracked] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const doTrack = () => {
-    const found = SAMPLE_REPORTS.find(r => r.id.toLowerCase() === query.toUpperCase().trim());
-    if (found) { setTracked(found); setNotFound(false); }
-    else { setTracked(null); setNotFound(true); }
+  useEffect(() => {
+    if (preloadId) doTrack(preloadId);
+  }, [preloadId]);
+
+  const doTrack = async (searchId = query) => {
+    if (!searchId) return;
+    
+    setLoading(true);
+    setNotFound(false);
+    setTracked(null);
+
+    const formattedQuery = searchId.toUpperCase().trim();
+
+    const { data, error } = await supabase
+      .from('reports')
+      .select('*')
+      .eq('tracking_id', formattedQuery)
+      .single(); 
+
+    setLoading(false);
+
+    if (error || !data) {
+      setNotFound(true);
+    } else {
+      setTracked({
+        id: data.tracking_id,
+        title: data.title,
+        status: data.status,
+        category: data.category,
+        location: data.location,
+        priority: data.priority,
+        needs: data.needs || [],
+        description: data.description,
+        image_url: data.image_url, // NEW: Grab the image from the database
+        date: new Date(data.created_at).toLocaleDateString(), 
+        upvotes: 0,
+        lat: 0, lng: 0
+      });
+    }
   };
 
   const getTimeline = (report) => {
@@ -963,27 +1930,29 @@ function TrackerView({ preloadId = "" }) {
       </div>
 
       <div className="tracker-search">
-        <input className="tracker-input" placeholder="SOS-001" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && doTrack()} />
-        <button className="track-btn" onClick={doTrack}>Track Aid →</button>
+        <input className="tracker-input" placeholder="SOS-123" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && doTrack()} />
+        <button className="track-btn" onClick={() => doTrack()} disabled={loading}>
+          {loading ? "Searching..." : "Track Aid →"}
+        </button>
       </div>
 
-      {!tracked && !notFound && (
+      {!tracked && !notFound && !loading && (
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 16, padding: "32px", textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 16 }}>🔎</div>
-          <p style={{ color: "var(--muted)", fontSize: 15 }}>Enter a report ID to view status. Try <span style={{ color: "var(--primary)", fontFamily: "var(--font-mono)" }}>SOS-001</span> through <span style={{ color: "var(--primary)", fontFamily: "var(--font-mono)" }}>SOS-007</span></p>
+          <p style={{ color: "var(--muted)", fontSize: 15 }}>Enter a report ID to view its live status on the network.</p>
         </div>
       )}
 
-      {notFound && (
-        <div className="not-found">
-          <div style={{ fontSize: 48 }}>❌</div>
-          <h3>Record Not Found</h3>
-          <p>No emergency signal with ID "{query}" was found. Check the ID and try again.</p>
+      {notFound && !loading && (
+        <div className="not-found" style={{ textAlign: "center", padding: "40px" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+          <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Record Not Found</h3>
+          <p style={{ color: "var(--muted)" }}>No emergency signal with ID "{query}" was found. Check the ID and try again.</p>
         </div>
       )}
 
       {tracked && (
-        <div className="report-detail-card">
+        <div className="report-detail-card" style={{ animation: "fadeIn 0.3s" }}>
           <div className="detail-header">
             <div className="detail-id-row">
               <span className="detail-id">{tracked.id}</span>
@@ -1000,17 +1969,28 @@ function TrackerView({ preloadId = "" }) {
           </div>
           <div className="detail-body">
             
-            <div style={{ background: "rgba(255,106,0,0.05)", border: "1px solid rgba(255,106,0,0.2)", borderRadius: 10, padding: "16px 18px", marginBottom: 24 }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--primary)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Requested Aid / Needs</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {tracked.needs && tracked.needs.map(n => (
-                  <span key={n} style={{ background: "var(--bg3)", color: "var(--text)", padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", border: "1px solid var(--border)" }}>✓ {n}</span>
-                ))}
+            {/* NEW: Render the uploaded image prominently in the Tracker! */}
+            {tracked.image_url && (
+              <img 
+                src={tracked.image_url} 
+                alt="Emergency Reference" 
+                style={{ width: "100%", height: "260px", objectFit: "cover", borderRadius: "12px", marginBottom: "32px", border: "1px solid var(--border)" }} 
+              />
+            )}
+
+            {tracked.needs && tracked.needs.length > 0 && (
+              <div style={{ background: "rgba(255,106,0,0.05)", border: "1px solid rgba(255,106,0,0.2)", borderRadius: 10, padding: "16px 18px", marginBottom: 24 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--primary)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Requested Aid / Needs</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {tracked.needs.map(n => (
+                    <span key={n} style={{ background: "var(--bg3)", color: "var(--text)", padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: "600", border: "1px solid var(--border)" }}>✓ {n}</span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="detail-meta-grid">
-              {[["Broadcast Time", tracked.date], ["Coordinates", `${tracked.lat}, ${tracked.lng}`], ["Disaster Type", tracked.category], ["Info Verifications", `${tracked.upvotes} confirmations`]].map(([l, v]) => (
+              {[["Broadcast Time", tracked.date], ["Disaster Type", tracked.category], ["Info Verifications", `${tracked.upvotes} confirmations`]].map(([l, v]) => (
                 <div key={l} className="detail-meta-item">
                   <div className="detail-meta-label">{l}</div>
                   <div className="detail-meta-value">{v}</div>
@@ -1052,54 +2032,136 @@ function TrackerView({ preloadId = "" }) {
   );
 }
 
-function RequestsView() {
+function RequestDetailView({ requestId, onBack, session }) {
+  const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [signingUp, setSigningUp] = useState(false);
+  const [isAlreadySignedUp, setIsAlreadySignedUp] = useState(false);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+      
+      if (data) setRequest(data);
+      setLoading(false);
+    };
+    
+    const checkVolunteerStatus = async () => {
+      if (!session) return;
+      const { data, error } = await supabase
+        .from('report_volunteers')
+        .select('id')
+        .eq('report_id', requestId)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+        
+      if (data) setIsAlreadySignedUp(true);
+    };
+    
+    if (requestId) {
+      fetchDetails();
+      checkVolunteerStatus();
+    }
+  }, [requestId, session]);
+
+  const handleSignUp = async () => {
+    if (!session) return alert("You must be logged in to volunteer!");
+    
+    setSigningUp(true);
+    const { error } = await supabase
+      .from('report_volunteers')
+      .insert([{ 
+        report_id: request.id, 
+        user_id: session.user.id 
+      }]);
+
+    setSigningUp(false);
+
+    if (error) {
+      if (error.code === '23505') {
+        alert("You are already signed up for this mission.");
+        setIsAlreadySignedUp(true);
+      } else {
+        alert("Error: " + error.message);
+      }
+    } else {
+      setIsAlreadySignedUp(true);
+      alert("✅ Successfully signed up! Mission added to your Dashboard.");
+    }
+  };
+
+  if (loading) return <div style={{ padding: 100, textAlign: "center", color: "var(--primary)" }}>⏳ Loading mission details...</div>;
+  if (!request) return <div style={{ padding: 100, textAlign: "center" }}>Request not found.</div>;
+
+  const isVolunteer = request.needs && (request.needs.includes("Volunteers") || request.needs.includes("Search & Rescue"));
+  const cardType = isVolunteer ? "Volunteer" : "Donate";
+
   return (
-    <div className="reports-container">
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--primary)", letterSpacing: 2, marginBottom: 8 }}>// COMMUNITY NEEDS</div>
-      <div className="reports-header" style={{ marginBottom: 40 }}>
-        <div>
-          <h2>Volunteer & Donate</h2>
-          <p>Directly support ongoing relief efforts by fulfilling specific community requests.</p>
+    <div className="reports-container" style={{ maxWidth: 800 }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", marginBottom: 24, fontSize: 15, fontWeight: 600 }}>
+        ← Back to all requests
+      </button>
+
+      <div className="report-detail-card" style={{ animation: "fadeIn 0.3s" }}>
+        <div className="detail-header" style={{ paddingBottom: 24 }}>
+          <div className="detail-id-row" style={{ marginBottom: 16 }}>
+             <span className={`req-type ${cardType}`}>{cardType} Needed</span>
+             <span style={{ fontSize: 13, color: PRIORITY_COLOR[request.priority], fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+               ⚡ {request.priority} Priority
+             </span>
+          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, lineHeight: 1.2 }}>{request.title}</h1>
+          <div style={{ fontSize: 15, color: "var(--muted)" }}>📍 {request.location}</div>
         </div>
-      </div>
 
-      <div className="request-grid">
-        {SAMPLE_REQUESTS.map(req => {
-          // Parse goal amount roughly to calculate a percentage
-          const goalNum = parseInt(req.goal.replace(/\D/g, ''));
-          const percent = Math.min(100, Math.round((req.current / goalNum) * 100)) || 0;
-          
-          return (
-            <div key={req.id} className="req-card">
-              <div className="req-header">
-                <span className={`req-type ${req.type}`}>{req.type}</span>
-                <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>⚡ {req.urgency}</span>
-              </div>
-              <h3 className="req-title">{req.title}</h3>
-              <p className="req-desc">{req.description}</p>
-              
-              <div>
-                <div className="req-progress-bar">
-                  <div className="req-progress-fill" style={{ 
-                    width: `${percent}%`, 
-                    background: req.type === "Donate" ? "var(--green)" : "var(--amber)" 
-                  }} />
-                </div>
-                <div className="req-progress-text">
-                  <span>{req.current} / {req.goal} Fulfilled</span>
-                  <span>{percent}%</span>
-                </div>
-              </div>
+        <div className="detail-body">
+          {/* NEW: Render the uploaded image prominently! */}
+          {request.image_url && (
+            <img 
+              src={request.image_url} 
+              alt="Disaster Scene" 
+              style={{ width: "100%", height: "340px", objectFit: "cover", borderRadius: "12px", marginBottom: "32px", border: "1px solid var(--border)" }} 
+            />
+          )}
 
-              <button 
-                className={`req-btn ${req.type}`} 
-                onClick={() => alert(`Opening ${req.type} flow for: ${req.title}`)}
-              >
-                {req.type === "Donate" ? "📦 Make a Donation" : "🤝 Sign Up to Volunteer"}
-              </button>
+          <div style={{ background: "var(--bg3)", padding: 24, borderRadius: 12, marginBottom: 32, border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, fontFamily: "var(--font-mono)" }}>
+              Specific Requirements:
             </div>
-          );
-        })}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {request.needs && request.needs.map(n => (
+                <span key={n} style={{ background: "var(--bg)", padding: "8px 16px", borderRadius: 8, fontSize: 14, fontWeight: 700, border: "1px solid var(--border)" }}>✓ {n}</span>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 40 }}>
+             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Situation Context</h3>
+             <p style={{ color: "var(--muted)", lineHeight: 1.7, fontSize: 15 }}>
+               {request.description || "The reporter did not provide additional context for this SOS. Please approach the situation with standard emergency protocols."}
+             </p>
+          </div>
+
+          <div style={{ display: "flex", gap: 16 }}>
+            {isAlreadySignedUp ? (
+              <button className="submit-btn" disabled style={{ marginTop: 0, flex: 2, background: "var(--bg3)", color: "var(--muted)", border: "1px solid var(--border)", cursor: "not-allowed" }}>
+                ✓ You are signed up for this mission
+              </button>
+            ) : (
+              <button className={`submit-btn ${cardType}`} style={{ marginTop: 0, flex: 2, background: cardType === "Volunteer" ? "var(--amber)" : "var(--green)", color: "#000" }} onClick={handleSignUp} disabled={signingUp}>
+                {signingUp ? "Processing..." : "🤝 Confirm & Sign Up"}
+              </button>
+            )}
+            
+            <button className="btn-outline" style={{ flex: 1, margin: 0 }} onClick={() => alert("Sharing link copied!")}>
+              Share
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1112,6 +2174,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [session, setSession] = useState(null);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -1126,14 +2189,21 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Update your Logout button function:
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setIsShutterOpen(false);
     navigate("home");
   };
+
   const navigate = (p, id = "") => {
+    const privatePages = ["report", "dashboard", "settings", "requests", "request-detail"];
+    
+    if (privatePages.includes(p) && !session) {
+      setPage("login");
+      return;
+    }
+
     setPage(p);
     if (id) setTrackId(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1171,10 +2241,23 @@ export default function App() {
               </button>
               
               <div className={`shutter-menu ${isShutterOpen ? "open" : ""}`}>
-                <button className="shutter-item" onClick={() => { setIsShutterOpen(false); setIsSettingsOpen(true); }}>🎛️ Preferences</button>
-                
-                {isLoggedIn ? (
-                  <button className="shutter-item" onClick={() => { setIsLoggedIn(false); setIsShutterOpen(false); navigate("home"); }}>🚪 Log Out</button>
+                {isLoggedIn && session ? (
+                  <>
+                    <div style={{ padding: "8px 14px", borderBottom: "1px solid var(--border)", marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
+                      {session?.user?.user_metadata?.avatar_url ? (
+                        <img src={session.user.user_metadata.avatar_url} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👤</div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{session?.user?.user_metadata?.full_name || "User"}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{session?.user?.email}</div>
+                      </div>
+                    </div>
+                    <button className="shutter-item" onClick={() => { navigate("dashboard"); setIsShutterOpen(false); }}>📊 My Dashboard</button>
+                    <button className="shutter-item" onClick={() => { setIsShutterOpen(false); setIsSettingsOpen(true); }}>🎛️ Settings</button>
+                    <button className="shutter-item" onClick={handleLogout}>🚪 Log Out</button>
+                  </>
                 ) : (
                   <>
                     <button className="shutter-item" onClick={() => { navigate("login"); setIsShutterOpen(false); }}>🔐 Log In</button>
@@ -1190,6 +2273,7 @@ export default function App() {
         <SettingsModal 
           isOpen={isSettingsOpen} 
           onClose={() => setIsSettingsOpen(false)} 
+          session={session}
         />
         
         {page === "login" && (
@@ -1207,12 +2291,19 @@ export default function App() {
         )}
 
         {page === "home" && <LandingPage onNavigate={navigate} />}
+        {page === "dashboard" && <DashboardView onNavigate={navigate} session={session} />}
         {page === "report" && <ReportForm onSuccess={handleFormSuccess} />}
         {page === "reports" && <ReportsView onTrack={handleTrack} />}
         {page === "forecast" && <ForecastView />}
         {page === "tracker" && <TrackerView key={trackId} preloadId={trackId} />}
-        {page === "requests" && <RequestsView />}
-
+        {page === "requests" && <RequestsView session={session} onNavigate={navigate} />}
+        {page === "request-detail" && (
+          <RequestDetailView 
+            requestId={trackId} 
+            session={session} 
+            onBack={() => navigate("requests")} 
+          />
+        )}
         <footer>
           <div className="footer-inner">
             <div className="footer-brand">
